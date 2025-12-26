@@ -36,7 +36,7 @@ type Nexar struct{
 	config *Config
 }
 
-func (n Nexar) Default(config Config) *Nexar {
+func Default(config Config) *Nexar {
 	return &Nexar{
 		tree: New(),
 		port: "8080",
