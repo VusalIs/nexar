@@ -137,11 +137,16 @@ func engine(nexar *Nexar, conn net.Conn) {
 	
 		cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
 	
-		fmt.Println("response: ", cntx.Response)
-	
+		if close, ok := cntx.Request.Headers["connection"]; ok && close == "close" {
+			cntx.Response.headers["connnection"] = "close"
+		}
 		conn.Write(parsers.parseResponse(cntx.Response))
 
-		engine(nexar, conn)
+		if _, ok := cntx.Request.Headers["connection"]; ok  {
+			conn.Close()
+		} else {
+			engine(nexar, conn)
+		}
 }
 
 func encodeString(dt []byte) ([]byte, error) {
