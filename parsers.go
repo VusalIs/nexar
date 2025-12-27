@@ -72,7 +72,7 @@ func serializeRequest(reader *bufio.Reader) (*Request, error) {
     return req, nil
 }
 
-func formatResponse(res *response) []byte {
+func serializeResponse(res *response) []byte {
     var buf bytes.Buffer
     
     // Status line

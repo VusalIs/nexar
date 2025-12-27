@@ -92,7 +92,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 		reader := bufio.NewReader(conn)
 
 		for {
-			request, err := parseRequest(reader)
+			request, err := serializeRequest(reader)
 			if request == nil {
 				conn.Close()
 				break
