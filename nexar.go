@@ -80,6 +80,10 @@ func engine(nexar *Nexar, conn net.Conn) {
 		reader := bufio.NewReader(conn)
 		parsers := Parsers{}
 		request, err := parsers.parseRequest(reader)
+		if request == nil {
+			conn.Close()
+			return
+		}
 		if err != nil {
 			fmt.Println("Error while parsing the request: ", err.Error())
 	
@@ -136,6 +140,8 @@ func engine(nexar *Nexar, conn net.Conn) {
 		fmt.Println("response: ", cntx.Response)
 	
 		conn.Write(parsers.parseResponse(cntx.Response))
+
+		engine(nexar, conn)
 }
 
 func encodeString(dt []byte) ([]byte, error) {
