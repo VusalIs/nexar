@@ -15,7 +15,7 @@ type request struct {
 	target string
 	protocol string
 	headers map[string]string
-	body []byte
+	Body []byte
 }
 
 type response struct {
@@ -27,7 +27,7 @@ type response struct {
 }
 
 type Config struct {
-	directory *string
+	Directory *string
 }
 
 type Nexar struct{
@@ -91,7 +91,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 	cntx := &Context{
 		Config: nexar.config,
 	}
-	cntx.Init(params, cntx.Config.directory, cntx.Request)
+	cntx.Init(params, cntx.Config.Directory, cntx.Request)
 
 	if treeNode == nil {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))

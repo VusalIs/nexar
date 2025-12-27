@@ -70,7 +70,7 @@ func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
 			return req, nil
 		}
 
-		req.body = content
+		req.Body = content
 	}
 
 	return req, nil
