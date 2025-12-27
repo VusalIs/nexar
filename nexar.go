@@ -97,7 +97,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 	cntx := &Context{
 		Config: nexar.config,
 	}
-	cntx.Init(params, cntx.Config.Directory, cntx.Request)
+	cntx.Init(params, cntx.Config.Directory, request)
 	
 	treeNode.handler(cntx)
 
