@@ -6,19 +6,17 @@ import (
 
 type Context struct {
 	Request *request
-	directory *string
 	Param map[string]string
 	Response *response
 	Config *Config
 }
 
-func(c *Context)Init(params map[string]string, directory *string, request *request) {
+func(c *Context)Init(params map[string]string, request *request) {
 	c.Response = &response{
 		protocol: "HTTP/1.1",
 		headers: make(map[string]string),
 	}
 	c.Param = params
-	c.directory = directory
 	c.Request = request
 }
 

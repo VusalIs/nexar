@@ -27,8 +27,8 @@ type response struct {
 }
 
 type Config struct {
-	directory *string
-	acceptedEncoding string
+	Directory *string
+	AcceptedEncoding string
 }
 
 type Nexar struct{
@@ -98,12 +98,12 @@ func engine(nexar *Nexar, conn net.Conn) {
 	cntx := &Context{
 		Config: nexar.config,
 	}
-	cntx.Init(params, cntx.Config.directory, request)
+	cntx.Init(params, request)
 	
 	treeNode.handler(cntx)
 
 	if encodingType, ok := request.Headers["Accept-Encoding"]; ok {
-		if encodingType == nexar.config.acceptedEncoding {
+		if encodingType == nexar.config.AcceptedEncoding {
 			cntx.Response.headers["Content-Encoding"] = request.Headers["Accept-Encoding"]
 		} else {	
 			delete(request.Headers, "Accept-Encoding")
