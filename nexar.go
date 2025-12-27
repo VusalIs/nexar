@@ -14,7 +14,7 @@ type request struct {
 	method string
 	target string
 	protocol string
-	headers map[string]string
+	Headers map[string]string
 	Body []byte
 }
 
