@@ -99,7 +99,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 			}
 			if err != nil {
 				fmt.Println("Error while parsing the request: ", err.Error())
-				conn.Write(parseResponse(errInternalServer()))
+				conn.Write(serializeResponse(errInternalServer()))
 	
 				continue
 			}
@@ -107,7 +107,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 			treeNode, params := nexar.tree.FindNodeByRoute(request.Method + "/" + request.Target)
 		
 			if treeNode == nil {
-				conn.Write(parseResponse(errNotFound()))
+				conn.Write(serializeResponse(errNotFound()))
 				continue
 			}
 		
@@ -121,7 +121,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 			}
 			cntx.finalize()
 			
-			conn.Write(parseResponse(cntx.Response))
+			conn.Write(serializeResponse(cntx.Response))
 	
 			if shouldClose(cntx.Request) {
 				conn.Close()

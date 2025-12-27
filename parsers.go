@@ -2,87 +2,98 @@ package nexar
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"strconv"
 	"strings"
 )
 
-func parseRequest(reader *bufio.Reader) (*Request, error) {
-	line, err := reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("Error while parsing request line: ", err.Error())
+const (
+    MB = 1 << 20
+)
 
-		return nil, err
-	}
+func serializeRequest(reader *bufio.Reader) (*Request, error) {
+    line, err := reader.ReadString('\n')
+    if err != nil {
+        return nil, fmt.Errorf("reading request line: %w", err)
+    }
 
-	line = strings.TrimSpace(line)
-	requestLineArr := strings.SplitN(line, " ", 3)
-	if len(requestLineArr) != 3 {
-		return nil, fmt.Errorf("malformed request line")
-	}
-	req := &Request{
-		Method:   requestLineArr[0],
-		Target:   requestLineArr[1][1:],
-		Protocol: requestLineArr[2],
-		Headers:  make(map[string]string),
-	}
+    parts := strings.SplitN(strings.TrimSpace(line), " ", 3)
+    if len(parts) != 3 {
+        return nil, fmt.Errorf("malformed request line")
+    }
 
-	for {
-		header, err := reader.ReadString('\n') 
-		if err != nil {
-			fmt.Println("Skipping problematic header")
-		}
-		if header == "\r\n" {
-			break
-		}
-		
-		headerKey, headerValue, found := strings.Cut(header, ":")
-		headerKey = strings.TrimSpace(strings.ToLower(headerKey))
-		if !found {
-			fmt.Println("Header wasn't constructed properly, so skipping: ", headerKey)
-			continue
-		} else {
-			req.Headers[headerKey] = strings.TrimSpace(headerValue)
-		}
-	}
-	
-	if contentLengthSt, ok := req.Headers["content-length"]; ok {
-		if !ok {
-			fmt.Println("Missing Content-Length so there is no content body")
-	
-			return req, nil
-		} 
+    target := parts[1]
+    if len(target) > 0 && target[0] == '/' {
+        target = target[1:]
+    }
 
-		contentLength, err := strconv.Atoi(contentLengthSt)
-		if err != nil {
-			return nil, fmt.Errorf("invalid content-length")
-		}
+    req := &Request{
+        Method:   parts[0],
+        Target:   target,
+        Protocol: parts[2],
+        Headers:  make(map[string]string),
+    }
 
-		content := make([]byte, contentLength)
-	
-		if _, err = io.ReadFull(reader, content); err != nil {
-			fmt.Println("Error while reding the content body: ", err.Error())
-	
-			return req, nil
-		}
+    // Parse headers
+    for {
+        header, err := reader.ReadString('\n')
+        if err != nil {
+            return nil, fmt.Errorf("reading header: %w", err)
+        }
+        if header == "\r\n" {
+            break
+        }
 
-		req.Body = content
-	}
+        key, value, found := strings.Cut(header, ":")
+        if !found {
+            continue
+        }
+        req.Headers[strings.ToLower(strings.TrimSpace(key))] = strings.TrimSpace(value)
+    }
 
-	return req, nil
+    if contentLengthStr, ok := req.Headers["content-length"]; ok {
+        contentLength, err := strconv.Atoi(contentLengthStr)
+        if err != nil {
+            return nil, fmt.Errorf("invalid content-length: %w", err)
+        }
+		// 10 MB limit
+        if contentLength > 10 * MB { 
+            return nil, fmt.Errorf("content-length too large")
+        }
+
+        req.Body = make([]byte, contentLength)
+        if _, err = io.ReadFull(reader, req.Body); err != nil {
+            return nil, fmt.Errorf("reading body: %w", err)
+        }
+    }
+
+    return req, nil
 }
 
-func parseResponse(res *response) []byte {
-	var stringB strings.Builder
-
-	stringB.Write([]byte(fmt.Sprintf("%s %s %s\r\n", res.protocol, res.code, res.status)))
-
-	for key, value := range res.headers {
-		stringB.Write([]byte(fmt.Sprintf("%s: %s\r\n", key, value)))
-	}
-	stringB.Write([]byte("\r\n"))
-	stringB.Write(res.body)
-
-	return []byte(stringB.String())
+func formatResponse(res *response) []byte {
+    var buf bytes.Buffer
+    
+    // Status line
+    buf.WriteString(res.protocol)
+    buf.WriteByte(' ')
+    buf.WriteString(res.code)
+    buf.WriteByte(' ')
+    buf.WriteString(res.status)
+    buf.WriteString("\r\n")
+    
+    // Headers
+    for key, value := range res.headers {
+        buf.WriteString(key)
+        buf.WriteString(": ")
+        buf.WriteString(value)
+        buf.WriteString("\r\n")
+    }
+    
+    // Blank line + body
+    buf.WriteString("\r\n")
+    buf.Write(res.body)
+    
+    return buf.Bytes()  // no conversion needed
 }
