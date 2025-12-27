@@ -103,9 +103,9 @@ func engine(nexar *Nexar, conn net.Conn) {
 	
 	treeNode.handler(cntx)
 
-	if encodingType, ok := request.Headers["Accept-Encoding"]; ok {
+	if encodingType, ok := request.Headers["accept-encoding"]; ok {
 		if encodingType == nexar.config.AcceptedEncoding {
-			cntx.Response.headers["Content-Encoding"] = request.Headers["Accept-Encoding"]
+			cntx.Response.headers["Content-Encoding"] = request.Headers["accept-encoding"]
 		} else {	
 			delete(request.Headers, "Accept-Encoding")
 		}
