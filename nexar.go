@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"slices"
 	"strings"
 )
 
@@ -103,9 +104,11 @@ func engine(nexar *Nexar, conn net.Conn) {
 	
 	treeNode.handler(cntx)
 
-	if encodingType, ok := request.Headers["accept-encoding"]; ok {
-		if encodingType == nexar.config.AcceptedEncoding {
-			cntx.Response.headers["Content-Encoding"] = request.Headers["accept-encoding"]
+	if encodingTypeSt, ok := request.Headers["accept-encoding"]; ok {
+		encodingTypes := strings.Split(encodingTypeSt, ",")
+		idx := slices.Index(encodingTypes, nexar.config.AcceptedEncoding)
+		if idx != -1 {
+			cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
 		} else {	
 			delete(request.Headers, "Accept-Encoding")
 		}
