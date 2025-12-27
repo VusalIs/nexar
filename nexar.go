@@ -86,18 +86,18 @@ func engine(nexar *Nexar, conn net.Conn) {
 		}))
 	}
 
+	fmt.Println("Receiving request to: " + request.method + request.target)
 	treeNode, params := nexar.tree.FindNodeByRoute(request.method + request.target)
+	if treeNode == nil {
+		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+		
+		return
+	}
 
 	cntx := &Context{
 		Config: nexar.config,
 	}
 	cntx.Init(params, cntx.Config.Directory, cntx.Request)
-
-	if treeNode == nil {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-
-		return
-	}
 	
 	treeNode.handler(cntx)
 
