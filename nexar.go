@@ -106,7 +106,10 @@ func engine(nexar *Nexar, conn net.Conn) {
 
 	if encodingTypeSt, ok := request.Headers["accept-encoding"]; ok {
 		encodingTypes := strings.Split(encodingTypeSt, ",")
-		idx := slices.Index(encodingTypes, nexar.config.AcceptedEncoding)
+
+		idx := slices.IndexFunc(encodingTypes,func(st string) bool {
+			return  strings.TrimSpace(st) == nexar.config.AcceptedEncoding
+		})
 		if idx != -1 {
 			cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
 		} else {	
