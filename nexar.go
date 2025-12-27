@@ -77,7 +77,6 @@ func (n *Nexar) Run(port string) {
 }
 
 func engine(nexar *Nexar, conn net.Conn) {
-	for {
 		reader := bufio.NewReader(conn)
 		parsers := Parsers{}
 		request, err := parsers.parseRequest(reader)
@@ -137,7 +136,6 @@ func engine(nexar *Nexar, conn net.Conn) {
 		fmt.Println("response: ", cntx.Response)
 	
 		conn.Write(parsers.parseResponse(cntx.Response))
-	}
 }
 
 func encodeString(dt []byte) ([]byte, error) {
