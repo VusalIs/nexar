@@ -28,7 +28,7 @@ func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
 		method: requestLineArr[0],
 		target: requestLineArr[1][1:],
 		protocol: requestLineArr[2],
-		headers: make(map[string]string),
+		Headers: make(map[string]string),
 	}
 
 	for {
@@ -46,11 +46,11 @@ func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
 			fmt.Println("Header wasn't constructed properly, so skipping: ", headerKey)
 			continue
 		} else {
-			req.headers[headerKey] = strings.TrimSpace(headerValue)
+			req.Headers[headerKey] = strings.TrimSpace(headerValue)
 		}
 	}
 	
-	if contentLengthSt, ok := req.headers["content-length"]; ok {
+	if contentLengthSt, ok := req.Headers["content-length"]; ok {
 		if !ok {
 			fmt.Println("Missing Content-Length so there is no content body")
 	
