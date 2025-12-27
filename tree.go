@@ -37,7 +37,6 @@ func (t *Tree) AddNode (paths []string, fn func(c *Context) *Context) {
 			continue
 		} 
 
-
 		// static segment
 		if node.staticChildren == nil {
 			node.staticChildren = make(map[string]*TreeNode)

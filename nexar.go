@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 )
 
@@ -81,7 +80,7 @@ func (n *Nexar) Run(port string) error {
 		conn, err := l.Accept()
 		if err != nil {
 			fmt.Println("Error accepting connection: ", err.Error())
-			os.Exit(1)
+			continue
 		}
 		
 		go engine(n, conn)

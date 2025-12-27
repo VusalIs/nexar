@@ -58,13 +58,14 @@ func(c *Context) Header(key string, vl string) {
 }
 
 func(c *Context) Data(status int, dt []byte) {
-	c.Status(200)
+	c.Status(status)
 
 	c.Response.body = dt
 }
 
 func (c *Context) JSON(status int, bd any) {
 	c.Status(status)
+	c.Header("Content-Type", "application/json")
 
 	body, err := json.Marshal(bd)
 	if err != nil {
@@ -75,6 +76,7 @@ func (c *Context) JSON(status int, bd any) {
 }
 
 func(c *Context) Status(status int) {
+	// TODO: Map status code to status text
 	switch status {
 		case 200:	
 			c.Response.code = "200"
