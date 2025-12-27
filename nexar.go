@@ -77,65 +77,67 @@ func (n *Nexar) Run(port string) {
 }
 
 func engine(nexar *Nexar, conn net.Conn) {
-	reader := bufio.NewReader(conn)
-	parsers := Parsers{}
-	request, err := parsers.parseRequest(reader)
-	if err != nil {
-		fmt.Println("Error while parsing the request: ", err.Error())
-
-		conn.Write(parsers.parseResponse(&response{
-			protocol: "HTTP/1.1",
-			status: "Internal Problem",
-			code: "500",
-		}))
-	}
-
-	fmt.Println("Request: ", request)
-	fmt.Println("Receiving request to: " + request.method + "/" + request.target)
-	treeNode, params := nexar.tree.FindNodeByRoute(request.method + "/" + request.target)
-
-	if treeNode == nil {
-		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-		
-		return
-	}
-
-	cntx := &Context{
-		Config: nexar.config,
-	}
-	cntx.Init(params, request)
+	for {
+		reader := bufio.NewReader(conn)
+		parsers := Parsers{}
+		request, err := parsers.parseRequest(reader)
+		if err != nil {
+			fmt.Println("Error while parsing the request: ", err.Error())
 	
-	treeNode.handler(cntx)
-
-	if encodingTypeSt, ok := request.Headers["accept-encoding"]; ok {
-		encodingTypes := strings.Split(encodingTypeSt, ",")
-
-		idx := slices.IndexFunc(encodingTypes,func(st string) bool {
-			return  strings.TrimSpace(st) == nexar.config.AcceptedEncoding
-		})
-		if idx != -1 {
-			cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
-
-			cntx.Response.body, err = encodeString(cntx.Response.body)
-			if err != nil {
-				fmt.Println("Error while encoding the response body")
-
-				cntx.Response = &response{
-					code: "500",
-					status: "Internal error",
-					body: []byte{},
-				}
-			}
-		} else {	
-			delete(request.Headers, "Accept-Encoding")
+			conn.Write(parsers.parseResponse(&response{
+				protocol: "HTTP/1.1",
+				status: "Internal Problem",
+				code: "500",
+			}))
 		}
+	
+		fmt.Println("Request: ", request)
+		fmt.Println("Receiving request to: " + request.method + "/" + request.target)
+		treeNode, params := nexar.tree.FindNodeByRoute(request.method + "/" + request.target)
+	
+		if treeNode == nil {
+			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+			
+			return
+		}
+	
+		cntx := &Context{
+			Config: nexar.config,
+		}
+		cntx.Init(params, request)
+		
+		treeNode.handler(cntx)
+	
+		if encodingTypeSt, ok := request.Headers["accept-encoding"]; ok {
+			encodingTypes := strings.Split(encodingTypeSt, ",")
+	
+			idx := slices.IndexFunc(encodingTypes,func(st string) bool {
+				return  strings.TrimSpace(st) == nexar.config.AcceptedEncoding
+			})
+			if idx != -1 {
+				cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
+	
+				cntx.Response.body, err = encodeString(cntx.Response.body)
+				if err != nil {
+					fmt.Println("Error while encoding the response body")
+	
+					cntx.Response = &response{
+						code: "500",
+						status: "Internal error",
+						body: []byte{},
+					}
+				}
+			} else {	
+				delete(request.Headers, "Accept-Encoding")
+			}
+		}
+	
+		cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
+	
+		fmt.Println("response: ", cntx.Response)
+	
+		conn.Write(parsers.parseResponse(cntx.Response))
 	}
-
-	cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
-
-	fmt.Println("response: ", cntx.Response)
-
-	conn.Write(parsers.parseResponse(cntx.Response))
 }
 
 func encodeString(dt []byte) ([]byte, error) {
