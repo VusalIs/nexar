@@ -138,7 +138,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 		cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
 	
 		if close, ok := cntx.Request.Headers["connection"]; ok && close == "close" {
-			cntx.Response.headers["connnection"] = "close"
+			cntx.Response.headers["Connection"] = "close"
 		}
 		conn.Write(parsers.parseResponse(cntx.Response))
 
