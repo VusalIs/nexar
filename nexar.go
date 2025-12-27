@@ -86,6 +86,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 		}))
 	}
 
+	fmt.Println("Request: ", request)
 	fmt.Println("Receiving request to: " + request.method + "/" + request.target)
 	treeNode, params := nexar.tree.FindNodeByRoute(request.method + "/" + request.target)
 
@@ -109,6 +110,8 @@ func engine(nexar *Nexar, conn net.Conn) {
 			delete(request.Headers, "Accept-Encoding")
 		}
 	}
+
+	fmt.Println("response: ", cntx.Response)
 
 	conn.Write(parsers.parseResponse(cntx.Response))
 }
