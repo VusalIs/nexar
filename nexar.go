@@ -7,27 +7,40 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"slices"
-	"strconv"
 	"strings"
 )
 
+func errInternalServer() *response {
+	return &response{
+		protocol: "HTTP/1.1",
+		code:     "500",
+		status:   "Internal Server Error",
+		headers:  make(map[string]string),
+	}
+}
 
-
-type request struct {
-	method string
-	target string
-	protocol string
-	Headers map[string]string
-	Body []byte
+func errNotFound() *response {
+	return &response{
+		protocol: "HTTP/1.1",
+		code:     "404",
+		status:   "Not Found",
+		headers:  make(map[string]string),
+	}
+}
+type Request struct {
+	Method   string
+	Target   string
+	Protocol string
+	Headers  map[string]string
+	Body     []byte
 }
 
 type response struct {
-	status string
+	status   string
 	protocol string
-	code string
-	headers map[string]string
-	body []byte
+	code     string
+	headers  map[string]string
+	body     []byte
 }
 
 type Config struct {
@@ -57,11 +70,10 @@ func (n *Nexar) Post(route string, fn func(cntx *Context) *Context) {
 	n.tree.AddNode(append([]string{"POST"}, strings.Split(route, "/")...), fn)
 }
 
-func (n *Nexar) Run(port string) {
+func (n *Nexar) Run(port string) error {
 	l, err := net.Listen("tcp", "0.0.0.0:" + port)
 	if err != nil {
-		fmt.Println("Failed to bind to port 4221")
-		os.Exit(1)
+		return fmt.Errorf("failed to bind to port %s: %w", port, err)
 	}
 	defer l.Close()
 
@@ -78,75 +90,46 @@ func (n *Nexar) Run(port string) {
 
 func engine(nexar *Nexar, conn net.Conn) {
 		reader := bufio.NewReader(conn)
-		parsers := Parsers{}
-		request, err := parsers.parseRequest(reader)
+		request, err := parseRequest(reader)
 		if request == nil {
 			conn.Close()
 			return
 		}
 		if err != nil {
 			fmt.Println("Error while parsing the request: ", err.Error())
-	
-			conn.Write(parsers.parseResponse(&response{
-				protocol: "HTTP/1.1",
-				status: "Internal Problem",
-				code: "500",
-			}))
+			conn.Write(parseResponse(errInternalServer()))
 		}
 	
-		fmt.Println("Request: ", request)
-		fmt.Println("Receiving request to: " + request.method + "/" + request.target)
-		treeNode, params := nexar.tree.FindNodeByRoute(request.method + "/" + request.target)
+		treeNode, params := nexar.tree.FindNodeByRoute(request.Method + "/" + request.Target)
 	
 		if treeNode == nil {
-			conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
-			
+			conn.Write(parseResponse(errNotFound()))
 			return
 		}
 	
-		cntx := &Context{
-			Config: nexar.config,
-		}
-		cntx.Init(params, request)
+		cntx := newContext(params, request, nexar.config)
 		
 		treeNode.handler(cntx)
 	
-		if encodingTypeSt, ok := request.Headers["accept-encoding"]; ok {
-			encodingTypes := strings.Split(encodingTypeSt, ",")
-	
-			idx := slices.IndexFunc(encodingTypes,func(st string) bool {
-				return  strings.TrimSpace(st) == nexar.config.AcceptedEncoding
-			})
-			if idx != -1 {
-				cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
-	
-				cntx.Response.body, err = encodeString(cntx.Response.body)
-				if err != nil {
-					fmt.Println("Error while encoding the response body")
-	
-					cntx.Response = &response{
-						code: "500",
-						status: "Internal error",
-						body: []byte{},
-					}
-				}
-			} else {	
-				delete(request.Headers, "Accept-Encoding")
-			}
+		if err := cntx.applyEncoding(nexar.config.AcceptedEncoding); err != nil {
+			fmt.Println("Error while encoding the response body")
+			cntx.Response = errInternalServer()
 		}
-	
-		cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
-	
-		if close, ok := cntx.Request.Headers["connection"]; ok && close == "close" {
-			cntx.Response.headers["Connection"] = "close"
-		}
-		conn.Write(parsers.parseResponse(cntx.Response))
+		cntx.finalize()
+		
+		conn.Write(parseResponse(cntx.Response))
 
-		if _, ok := cntx.Request.Headers["connection"]; ok  {
+		if shouldClose(cntx.Request) {
 			conn.Close()
-		} else {
-			engine(nexar, conn)
+			return
 		}
+		
+		engine(nexar, conn)
+}
+
+func shouldClose(req *Request) bool {
+    conn, ok := req.Headers["connection"]
+    return ok && conn == "close"
 }
 
 func encodeString(dt []byte) ([]byte, error) {

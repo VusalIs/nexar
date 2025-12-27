@@ -2,22 +2,55 @@ package nexar
 
 import (
 	"encoding/json"
+	"strconv"
+	"strings"
 )
 
 type Context struct {
-	Request *request
-	Param map[string]string
+	Request  *Request
+	Param    map[string]string
 	Response *response
-	Config *Config
+	Config   *Config
 }
 
-func(c *Context)Init(params map[string]string, request *request) {
-	c.Response = &response{
-		protocol: "HTTP/1.1",
-		headers: make(map[string]string),
+func newContext(params map[string]string, request *Request, config *Config) *Context {
+	return &Context{
+		Request: request,
+		Param:   params,
+		Config:  config,
+		Response: &response{
+			protocol: "HTTP/1.1",
+			headers:  make(map[string]string),
+		},
 	}
-	c.Param = params
-	c.Request = request
+}
+
+func (c *Context) applyEncoding(acceptedEncoding string) error {
+    encodingHeader, ok := c.Request.Headers["accept-encoding"]
+    if !ok {
+        return nil
+    }
+
+    for _, enc := range strings.Split(encodingHeader, ",") {
+        if strings.TrimSpace(enc) == acceptedEncoding {
+            encoded, err := encodeString(c.Response.body)
+            if err != nil {
+                return err
+            }
+            c.Response.body = encoded
+            c.Response.headers["Content-Encoding"] = acceptedEncoding
+            return nil
+        }
+    }
+    return nil
+}
+
+func (c *Context) finalize() {
+    c.Header("Content-Length", strconv.Itoa(len(c.Response.body)))
+    
+    if conn, ok := c.Request.Headers["connection"]; ok && conn == "close" {
+        c.Response.headers["Connection"] = "close"
+    }
 }
 
 func(c *Context) Header(key string, vl string) {

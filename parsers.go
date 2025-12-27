@@ -8,10 +8,7 @@ import (
 	"strings"
 )
 
-
-type Parsers struct {}
-
-func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
+func parseRequest(reader *bufio.Reader) (*Request, error) {
 	line, err := reader.ReadString('\n')
 	if err != nil {
 		fmt.Println("Error while parsing request line: ", err.Error())
@@ -24,11 +21,11 @@ func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
 	if len(requestLineArr) != 3 {
 		return nil, fmt.Errorf("malformed request line")
 	}
-	req := &request{
-		method: requestLineArr[0],
-		target: requestLineArr[1][1:],
-		protocol: requestLineArr[2],
-		Headers: make(map[string]string),
+	req := &Request{
+		Method:   requestLineArr[0],
+		Target:   requestLineArr[1][1:],
+		Protocol: requestLineArr[2],
+		Headers:  make(map[string]string),
 	}
 
 	for {
@@ -76,7 +73,7 @@ func (p Parsers) parseRequest(reader *bufio.Reader) (*request, error) {
 	return req, nil
 }
 
-func (p Parsers) parseResponse(res *response) []byte {
+func parseResponse(res *response) []byte {
 	var stringB strings.Builder
 
 	stringB.Write([]byte(fmt.Sprintf("%s %s %s\r\n", res.protocol, res.code, res.status)))
