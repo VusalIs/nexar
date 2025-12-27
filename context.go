@@ -6,7 +6,7 @@ import (
 
 type Context struct {
 	Request *request
-	Directory *string
+	directory *string
 	Param map[string]string
 	Response *response
 	Config *Config
@@ -18,7 +18,7 @@ func(c *Context)Init(params map[string]string, directory *string, request *reque
 		headers: make(map[string]string),
 	}
 	c.Param = params
-	c.Directory = directory
+	c.directory = directory
 	c.Request = request
 }
 

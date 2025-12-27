@@ -27,7 +27,8 @@ type response struct {
 }
 
 type Config struct {
-	Directory *string
+	directory *string
+	acceptedEncoding string
 }
 
 type Nexar struct{
@@ -36,11 +37,11 @@ type Nexar struct{
 	config *Config
 }
 
-func Default(config Config) *Nexar {
+func Default(config *Config) *Nexar {
 	return &Nexar{
 		tree: New(),
 		port: "8080",
-		config: &config,
+		config: config,
 	}
 }
 
@@ -74,7 +75,6 @@ func (n *Nexar) Run(port string) {
 func engine(nexar *Nexar, conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	parsers := Parsers{}
-
 	request, err := parsers.parseRequest(reader)
 	if err != nil {
 		fmt.Println("Error while parsing the request: ", err.Error())
@@ -88,6 +88,7 @@ func engine(nexar *Nexar, conn net.Conn) {
 
 	fmt.Println("Receiving request to: " + request.method + "/" + request.target)
 	treeNode, params := nexar.tree.FindNodeByRoute(request.method + "/" + request.target)
+
 	if treeNode == nil {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 		
@@ -97,9 +98,17 @@ func engine(nexar *Nexar, conn net.Conn) {
 	cntx := &Context{
 		Config: nexar.config,
 	}
-	cntx.Init(params, cntx.Config.Directory, request)
+	cntx.Init(params, cntx.Config.directory, request)
 	
 	treeNode.handler(cntx)
+
+	if encodingType, ok := request.Headers["Accept-Encoding"]; ok {
+		if encodingType == nexar.config.acceptedEncoding {
+			cntx.Response.headers["Content-Encoding"] = request.Headers["Accept-Encoding"]
+		} else {	
+			delete(request.Headers, "Accept-Encoding")
+		}
+	}
 
 	conn.Write(parsers.parseResponse(cntx.Response))
 }
