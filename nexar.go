@@ -136,6 +136,8 @@ func engine(nexar *Nexar, conn net.Conn) {
 		fmt.Println("response: ", cntx.Response)
 	
 		conn.Write(parsers.parseResponse(cntx.Response))
+
+		engine(nexar, conn)
 }
 
 func encodeString(dt []byte) ([]byte, error) {
