@@ -2,10 +2,13 @@ package nexar
 
 import (
 	"bufio"
+	"bytes"
+	"compress/gzip"
 	"fmt"
 	"net"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -112,12 +115,39 @@ func engine(nexar *Nexar, conn net.Conn) {
 		})
 		if idx != -1 {
 			cntx.Response.headers["Content-Encoding"] = nexar.config.AcceptedEncoding
+
+			cntx.Response.body, err = encodeString(cntx.Response.body)
+			if err != nil {
+				fmt.Println("Error while encoding the response body")
+
+				cntx.Response = &response{
+					code: "500",
+					status: "Internal error",
+					body: []byte{},
+				}
+			}
 		} else {	
 			delete(request.Headers, "Accept-Encoding")
 		}
 	}
 
+	cntx.Header("Content-Length", strconv.Itoa(len(cntx.Response.body)))
+
 	fmt.Println("response: ", cntx.Response)
 
 	conn.Write(parsers.parseResponse(cntx.Response))
+}
+
+func encodeString(dt []byte) ([]byte, error) {
+	var buf bytes.Buffer
+
+	gz := gzip.NewWriter(&buf)
+	if _, err := gz.Write(dt); err != nil {
+		return nil, err
+	}
+	if err := gz.Close(); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
