@@ -33,7 +33,7 @@ func (c *Context) applyEncoding(acceptedEncoding string) error {
 
     for _, enc := range strings.Split(encodingHeader, ",") {
         if strings.TrimSpace(enc) == acceptedEncoding {
-            encoded, err := encodeString(c.Response.body)
+            encoded, err := gzipCompress(c.Response.body)
             if err != nil {
                 return err
             }

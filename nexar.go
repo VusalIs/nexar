@@ -90,41 +90,44 @@ func (n *Nexar) Run(port string) error {
 
 func engine(nexar *Nexar, conn net.Conn) {
 		reader := bufio.NewReader(conn)
-		request, err := parseRequest(reader)
-		if request == nil {
-			conn.Close()
-			return
-		}
-		if err != nil {
-			fmt.Println("Error while parsing the request: ", err.Error())
-			conn.Write(parseResponse(errInternalServer()))
-		}
-	
-		treeNode, params := nexar.tree.FindNodeByRoute(request.Method + "/" + request.Target)
-	
-		if treeNode == nil {
-			conn.Write(parseResponse(errNotFound()))
-			return
-		}
-	
-		cntx := newContext(params, request, nexar.config)
-		
-		treeNode.handler(cntx)
-	
-		if err := cntx.applyEncoding(nexar.config.AcceptedEncoding); err != nil {
-			fmt.Println("Error while encoding the response body")
-			cntx.Response = errInternalServer()
-		}
-		cntx.finalize()
-		
-		conn.Write(parseResponse(cntx.Response))
 
-		if shouldClose(cntx.Request) {
-			conn.Close()
-			return
-		}
+		for {
+			request, err := parseRequest(reader)
+			if request == nil {
+				conn.Close()
+				break
+			}
+			if err != nil {
+				fmt.Println("Error while parsing the request: ", err.Error())
+				conn.Write(parseResponse(errInternalServer()))
+	
+				continue
+			}
 		
-		engine(nexar, conn)
+			treeNode, params := nexar.tree.FindNodeByRoute(request.Method + "/" + request.Target)
+		
+			if treeNode == nil {
+				conn.Write(parseResponse(errNotFound()))
+				continue
+			}
+		
+			cntx := newContext(params, request, nexar.config)
+			
+			treeNode.handler(cntx)
+		
+			if err := cntx.applyEncoding(nexar.config.AcceptedEncoding); err != nil {
+				fmt.Println("Error while encoding the response body")
+				cntx.Response = errInternalServer()
+			}
+			cntx.finalize()
+			
+			conn.Write(parseResponse(cntx.Response))
+	
+			if shouldClose(cntx.Request) {
+				conn.Close()
+				break
+			}
+		}
 }
 
 func shouldClose(req *Request) bool {
@@ -132,13 +135,16 @@ func shouldClose(req *Request) bool {
     return ok && conn == "close"
 }
 
-func encodeString(dt []byte) ([]byte, error) {
+func gzipCompress(dt []byte) ([]byte, error) {
 	var buf bytes.Buffer
 
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(dt); err != nil {
+		gz.Close()
+
 		return nil, err
 	}
+	// TODO: Learn more about why close can return an error
 	if err := gz.Close(); err != nil {
 		return nil, err
 	}
