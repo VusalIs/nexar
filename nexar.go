@@ -53,9 +53,9 @@ type Nexar struct{
 	config *Config
 }
 
-func Default(config *Config) *Nexar {
+func New(config *Config) *Nexar {
 	return &Nexar{
-		tree: New(),
+		tree: newTree(),
 		port: "8080",
 		config: config,
 	}

@@ -13,7 +13,7 @@ type TreeNode struct {
 	handler        func(c *Context) *Context
 }
 
-func New() *Tree {
+func newTree() *Tree {
 	return &Tree{
 		root: &TreeNode{
 			staticChildren: make(map[string]*TreeNode),
