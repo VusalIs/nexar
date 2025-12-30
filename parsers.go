@@ -36,7 +36,6 @@ func serializeRequest(reader *bufio.Reader) (*Request, error) {
         Headers:  make(map[string]string),
     }
 
-    // Parse headers
     for {
         header, err := reader.ReadString('\n')
         if err != nil {
@@ -58,7 +57,7 @@ func serializeRequest(reader *bufio.Reader) (*Request, error) {
         if err != nil {
             return nil, fmt.Errorf("invalid content-length: %w", err)
         }
-		// 10 MB limit
+
         if contentLength > 10 * MB { 
             return nil, fmt.Errorf("content-length too large")
         }
@@ -75,7 +74,6 @@ func serializeRequest(reader *bufio.Reader) (*Request, error) {
 func serializeResponse(res *response) []byte {
     var buf bytes.Buffer
     
-    // Status line
     buf.WriteString(res.protocol)
     buf.WriteByte(' ')
     buf.WriteString(res.code)
@@ -83,7 +81,6 @@ func serializeResponse(res *response) []byte {
     buf.WriteString(res.status)
     buf.WriteString("\r\n")
     
-    // Headers
     for key, value := range res.headers {
         buf.WriteString(key)
         buf.WriteString(": ")
@@ -91,7 +88,6 @@ func serializeResponse(res *response) []byte {
         buf.WriteString("\r\n")
     }
     
-    // Blank line + body
     buf.WriteString("\r\n")
     buf.Write(res.body)
     
